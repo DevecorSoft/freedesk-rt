@@ -1,0 +1,38 @@
+# put here your custom config value
+menu "Freedesk Configuration"
+config DE_CONFIG_WIFI_SSID
+    string "WiFi SSID"
+    default "myssid"
+    help
+	SSID (network name) for the example to connect to.
+
+config DE_CONFIG_WIFI_PASSWORD
+    string "WiFi Password"
+    default "mypassword"
+    help
+	WiFi password (WPA or WPA2) for the example to use.
+
+config DE_FREEDESK_TOPIC
+    string "Freedesk Topic"
+    default "mytopic"
+    help
+    freedesk topic for rt to use
+
+config DE_BROKER_URL
+    string "MQTT Broker URL"
+    default "mqtt://localhost:1883"
+    help
+    the url to connect mqtt broker
+
+config DE_BROKER_USER_NAME
+    string "MQTT Broker User Name"
+    default "user"
+    help
+    mqtt broker user name
+
+config DE_BROKER_USER_PASS
+    string "MQTT Broker User Password"
+    default "mypassword"
+    help
+    mqtt broker user password
+endmenu
