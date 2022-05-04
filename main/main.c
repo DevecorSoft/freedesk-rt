@@ -1,6 +1,4 @@
 #include <stdio.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "esp_system.h"
 #include "esp_spi_flash.h"
 #include "driver/gpio.h"
@@ -16,9 +14,10 @@
 #define DE_BROKER_USER_NAME CONFIG_BROKER_USER_NAME
 #define DE_BROKER_USER_PASS CONFIG_BROKER_USER_PASS
 
-#define GPIO_OUTPUT_IO_0 15
-#define GPIO_OUTPUT_IO_1 16
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1))
+#define GPIO_OUTPUT_IO_0 12
+#define GPIO_OUTPUT_IO_1 14
+#define GPIO_OUTPUT_IO_2 16
+#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1) | (1ULL << GPIO_OUTPUT_IO_2))
 
 static char s_freedesk_topic[32] = DE_FREEDESK_TOPIC;
 
@@ -87,13 +86,13 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         printf("DATA=%.*s\r\n", event->data_len, event->data);
         if (strncmp(event->data, "rasie", sizeof("rasie")))
         {
-            gpio_set_level(GPIO_OUTPUT_IO_0, 1);
-            gpio_set_level(GPIO_OUTPUT_IO_1, 0);
+            // gpio_set_level(GPIO_OUTPUT_IO_0, 0);
+            // gpio_set_level(GPIO_OUTPUT_IO_1, 0);
         }
         else if (strncmp(event->data, "lower", sizeof("lower")))
         {
-            gpio_set_level(GPIO_OUTPUT_IO_0, 0);
-            gpio_set_level(GPIO_OUTPUT_IO_1, 1);
+            // gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+            // gpio_set_level(GPIO_OUTPUT_IO_1, 1);
         }
         break;
     case MQTT_EVENT_ERROR:
@@ -128,7 +127,6 @@ void app_main(void)
 {
     print_chip_info();
 
-    initiate_gpio();
     ESP_LOGI(TAG, "[APP] Startup..");
     ESP_LOGI(TAG, "[APP] Free memory: %d bytes", esp_get_free_heap_size());
     ESP_LOGI(TAG, "[APP] IDF version: %s", esp_get_idf_version());
@@ -143,6 +141,11 @@ void app_main(void)
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
+
+    initiate_gpio();
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_16, 1));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_14, 0));
+
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ESP_ERROR_CHECK(connect());
