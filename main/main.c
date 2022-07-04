@@ -14,10 +14,11 @@
 #define DE_BROKER_USER_NAME CONFIG_BROKER_USER_NAME
 #define DE_BROKER_USER_PASS CONFIG_BROKER_USER_PASS
 
-#define GPIO_OUTPUT_IO_0 12
-#define GPIO_OUTPUT_IO_1 14
-#define GPIO_OUTPUT_IO_2 16
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1) | (1ULL << GPIO_OUTPUT_IO_2))
+#define GPIO_OUTPUT_IO_0 12 // up
+#define GPIO_OUTPUT_IO_1 14 // down
+#define GPIO_OUTPUT_IO_2 15
+#define GPIO_OUTPUT_IO_3 16 // lock
+#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1) | (1ULL << GPIO_OUTPUT_IO_2) | (1ULL << GPIO_OUTPUT_IO_3))
 
 static char s_freedesk_topic[32] = DE_FREEDESK_TOPIC;
 
@@ -86,13 +87,15 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         printf("DATA=%.*s\r\n", event->data_len, event->data);
         if (strncmp(event->data, "rasie", sizeof("rasie")))
         {
-            // gpio_set_level(GPIO_OUTPUT_IO_0, 0);
-            // gpio_set_level(GPIO_OUTPUT_IO_1, 0);
+            gpio_set_level(GPIO_OUTPUT_IO_0, 1);
+            gpio_set_level(GPIO_OUTPUT_IO_1, 0);
+            gpio_set_level(GPIO_OUTPUT_IO_3, 0);
         }
         else if (strncmp(event->data, "lower", sizeof("lower")))
         {
-            // gpio_set_level(GPIO_OUTPUT_IO_0, 1);
-            // gpio_set_level(GPIO_OUTPUT_IO_1, 1);
+            gpio_set_level(GPIO_OUTPUT_IO_0, 0);
+            gpio_set_level(GPIO_OUTPUT_IO_1, 1);
+            gpio_set_level(GPIO_OUTPUT_IO_3, 0);
         }
         break;
     case MQTT_EVENT_ERROR:
@@ -143,8 +146,10 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
 
     initiate_gpio();
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_16, 1));
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_NUM_14, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_0, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_1, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_2, 0));
+    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_3, 1));
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
