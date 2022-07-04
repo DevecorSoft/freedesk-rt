@@ -54,6 +54,28 @@ void initiate_gpio()
 
 static const char *TAG = "DE_MQTT";
 
+void desk_control(bool up, bool down, bool lock)
+{
+    gpio_set_level(GPIO_OUTPUT_IO_0, up);
+    gpio_set_level(GPIO_OUTPUT_IO_1, down);
+    gpio_set_level(GPIO_OUTPUT_IO_3, lock);
+}
+
+void desk_up()
+{
+    desk_control(true, false, false);
+}
+
+void desk_down()
+{
+    desk_control(false, true, false);
+}
+
+void desk_lock()
+{
+    desk_control(false, false, true);
+}
+
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
@@ -87,15 +109,15 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         printf("DATA=%.*s\r\n", event->data_len, event->data);
         if (strncmp(event->data, "rasie", sizeof("rasie")))
         {
-            gpio_set_level(GPIO_OUTPUT_IO_0, 1);
-            gpio_set_level(GPIO_OUTPUT_IO_1, 0);
-            gpio_set_level(GPIO_OUTPUT_IO_3, 0);
+            desk_up();
         }
         else if (strncmp(event->data, "lower", sizeof("lower")))
         {
-            gpio_set_level(GPIO_OUTPUT_IO_0, 0);
-            gpio_set_level(GPIO_OUTPUT_IO_1, 1);
-            gpio_set_level(GPIO_OUTPUT_IO_3, 0);
+            desk_down();
+        }
+        else if (strncmp(event->data, "lock", sizeof("lock")))
+        {
+            desk_lock();
         }
         break;
     case MQTT_EVENT_ERROR:
