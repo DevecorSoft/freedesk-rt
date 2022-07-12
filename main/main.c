@@ -59,6 +59,10 @@ void desk_control(bool up, bool down, bool lock)
     gpio_set_level(GPIO_OUTPUT_IO_0, up);
     gpio_set_level(GPIO_OUTPUT_IO_1, down);
     gpio_set_level(GPIO_OUTPUT_IO_3, lock);
+
+    ESP_LOGI(TAG, "gpio 0 level: %d", gpio_get_level(GPIO_OUTPUT_IO_0));
+    ESP_LOGI(TAG, "gpio 1 level: %d", gpio_get_level(GPIO_OUTPUT_IO_1));
+    ESP_LOGI(TAG, "gpio 3 level: %d", gpio_get_level(GPIO_OUTPUT_IO_3));
 }
 
 void desk_up()
@@ -109,14 +113,17 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         printf("DATA=%.*s\r\n", event->data_len, event->data);
         if (strncmp(event->data, "rasie", sizeof("rasie")))
         {
+            ESP_LOGI(TAG, "---up")
             desk_up();
         }
         else if (strncmp(event->data, "lower", sizeof("lower")))
         {
+            ESP_LOGI(TAG, "---lower")
             desk_down();
         }
         else if (strncmp(event->data, "lock", sizeof("lock")))
         {
+            ESP_LOGI(TAG, "---lock")
             desk_lock();
         }
         break;
