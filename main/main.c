@@ -14,8 +14,8 @@
 #define DE_BROKER_USER_NAME CONFIG_BROKER_USER_NAME
 #define DE_BROKER_USER_PASS CONFIG_BROKER_USER_PASS
 
-#define GPIO_OUTPUT_IO_0 12 // up
-#define GPIO_OUTPUT_IO_1 14 // down
+#define GPIO_OUTPUT_IO_0 12 // lower
+#define GPIO_OUTPUT_IO_1 14 // raise
 #define GPIO_OUTPUT_IO_2 15
 #define GPIO_OUTPUT_IO_3 16 // lock
 #define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1) | (1ULL << GPIO_OUTPUT_IO_2) | (1ULL << GPIO_OUTPUT_IO_3))
@@ -54,23 +54,23 @@ void initiate_gpio()
 
 static const char *TAG = "DE_MQTT";
 
-void desk_control(bool up, bool down, bool lock)
+void desk_control(bool lower, bool raise, bool lock)
 {
-    gpio_set_level(GPIO_OUTPUT_IO_0, up);
-    gpio_set_level(GPIO_OUTPUT_IO_1, down);
-    gpio_set_level(GPIO_OUTPUT_IO_3, lock);
+    gpio_set_level(GPIO_OUTPUT_IO_3, !lock);
+    gpio_set_level(GPIO_OUTPUT_IO_0, lower);
+    gpio_set_level(GPIO_OUTPUT_IO_1, raise);
 
     ESP_LOGI(TAG, "gpio 0 level: %d", gpio_get_level(GPIO_OUTPUT_IO_0));
     ESP_LOGI(TAG, "gpio 1 level: %d", gpio_get_level(GPIO_OUTPUT_IO_1));
     ESP_LOGI(TAG, "gpio 3 level: %d", gpio_get_level(GPIO_OUTPUT_IO_3));
 }
 
-void desk_up()
+void desk_lower()
 {
     desk_control(true, false, false);
 }
 
-void desk_down()
+void desk_raise()
 {
     desk_control(false, true, false);
 }
@@ -111,19 +111,19 @@ static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
         printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
         printf("DATA=%.*s\r\n", event->data_len, event->data);
-        if (strncmp(event->data, "rasie", sizeof("rasie")))
+        if (strncmp(event->data, "raise", event->data_len) == 0)
         {
-            ESP_LOGI(TAG, "---up")
-            desk_up();
+            ESP_LOGI(TAG, "---up");
+            desk_raise();
         }
-        else if (strncmp(event->data, "lower", sizeof("lower")))
+        else if (strncmp(event->data, "lower", event->data_len) == 0)
         {
-            ESP_LOGI(TAG, "---lower")
-            desk_down();
+            ESP_LOGI(TAG, "---lower");
+            desk_lower();
         }
-        else if (strncmp(event->data, "lock", sizeof("lock")))
+        else if (strncmp(event->data, "lock", event->data_len) == 0)
         {
-            ESP_LOGI(TAG, "---lock")
+            ESP_LOGI(TAG, "---lock");
             desk_lock();
         }
         break;
