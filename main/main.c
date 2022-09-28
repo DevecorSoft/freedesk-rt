@@ -16,11 +16,33 @@
 
 #define GPIO_OUTPUT_IO_0 12 // lower
 #define GPIO_OUTPUT_IO_1 14 // raise
-#define GPIO_OUTPUT_IO_2 15
-#define GPIO_OUTPUT_IO_3 16 // lock
-#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1) | (1ULL << GPIO_OUTPUT_IO_2) | (1ULL << GPIO_OUTPUT_IO_3))
+#define GPIO_OUTPUT_PIN_SEL ((1ULL << GPIO_OUTPUT_IO_0) | (1ULL << GPIO_OUTPUT_IO_1))
+
+#define GPIO_INPUT_IO_2 4 // no raising
+#define GPIO_INPUT_IO_3 5 // no lowering
+#define GPIO_INPUT_PIN_SEL ((1ULL << GPIO_INPUT_IO_2) | (1ULL << GPIO_INPUT_IO_3))
 
 static char s_freedesk_topic[32] = DE_FREEDESK_TOPIC;
+static xQueueHandle gpio_evt_queue = NULL;
+static const char *TAG = "DE_MQTT";
+
+static void fd_gpio_input_event_handler(void *arg)
+{
+    uint32_t gpio_num = (uint32_t) arg;
+    ESP_LOGI(TAG, "GPIO input event  %d\n", gpio_num);
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
+
+static void gpio_task_example(void *arg)
+{
+    uint32_t io_num;
+
+    for (;;) {
+        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY)) {
+            ESP_LOGI(TAG, "GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
+        }
+    }
+}
 
 void print_chip_info()
 {
@@ -52,32 +74,47 @@ void initiate_gpio()
     gpio_config(&io_conf);
 }
 
-static const char *TAG = "DE_MQTT";
-
-void desk_control(bool lower, bool raise, bool lock)
+void initiate_gpio_input()
 {
-    gpio_set_level(GPIO_OUTPUT_IO_3, !lock);
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    io_conf.pull_down_en = 0;
+    io_conf.pull_up_en = 1;
+    gpio_config(&io_conf);
+
+    gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
+    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+    gpio_install_isr_service(0);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_INPUT_IO_2, fd_gpio_input_event_handler, (void *) GPIO_INPUT_IO_2);
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_INPUT_IO_3, fd_gpio_input_event_handler, (void *) GPIO_INPUT_IO_3);
+}
+
+void desk_control(bool lower, bool raise)
+{
     gpio_set_level(GPIO_OUTPUT_IO_0, lower);
     gpio_set_level(GPIO_OUTPUT_IO_1, raise);
 
     ESP_LOGI(TAG, "gpio 0 level: %d", gpio_get_level(GPIO_OUTPUT_IO_0));
     ESP_LOGI(TAG, "gpio 1 level: %d", gpio_get_level(GPIO_OUTPUT_IO_1));
-    ESP_LOGI(TAG, "gpio 3 level: %d", gpio_get_level(GPIO_OUTPUT_IO_3));
 }
 
 void desk_lower()
 {
-    desk_control(true, false, false);
+    desk_control(true, false);
 }
 
 void desk_raise()
 {
-    desk_control(false, true, false);
+    desk_control(false, true);
 }
 
 void desk_lock()
 {
-    desk_control(false, false, true);
+    desk_control(false, false);
 }
 
 static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
@@ -175,10 +212,10 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_netif_init());
 
     initiate_gpio();
+    initiate_gpio_input();
+
     ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_0, 0));
     ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_1, 0));
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_2, 0));
-    ESP_ERROR_CHECK(gpio_set_level(GPIO_OUTPUT_IO_3, 1));
 
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
